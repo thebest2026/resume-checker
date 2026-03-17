@@ -8,26 +8,77 @@ const handler = async (req, res) => {
   let prompt;
 
   if (mode === 'improve') {
-    prompt = `你是一位頂尖的履歷撰寫專家，擅長將平淡的履歷改寫成令人印象深刻的版本。
+    const analyzePrompt = `你是一位資深履歷顧問，請分析以下履歷並給出具體建議。
+
+${role ? `應徵職位：${role}` : '（未指定職位）'}
+${jd ? `職缺描述：\n${jd}` : ''}
+
+履歷內容：
+${resume}
+
+請用 JSON 格式回覆，不要加任何其他文字：
+{
+  "weaknesses": ["最需要改善的問題1", "最需要改善的問題2", "最需要改善的問題3"],
+  "missing_from_jd": ["職缺要求但履歷沒展現的能力1", "能力2"],
+  "strongest_points": ["最有說服力的亮點1", "亮點2"],
+  "overall_strategy": "一句話說明改寫策略方向"
+}`;
+
+    let analysis = null;
+    try {
+      const analyzeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 800,
+          messages: [{ role: 'user', content: analyzePrompt }]
+        })
+      });
+      if (analyzeRes.ok) {
+        const analyzeData = await analyzeRes.json();
+        const analyzeText = analyzeData.content.map(i => i.text || '').join('');
+        const clean = analyzeText.replace(/```json|```/g, '').trim();
+        analysis = JSON.parse(clean);
+      }
+    } catch(e) {
+      console.log('分析步驟失敗，繼續改寫:', e.message);
+    }
+
+    const weaknessSection = analysis ? `
+【分析發現的問題，改寫時必須解決】
+${analysis.weaknesses.map((w, i) => `${i+1}. ${w}`).join('\n')}
+
+【職缺要求但目前履歷沒展現的能力，改寫時要想辦法凸顯】
+${(analysis.missing_from_jd || []).map((m, i) => `${i+1}. ${m}`).join('\n')}
+
+【這些亮點要保留並強化】
+${analysis.strongest_points.map((s, i) => `${i+1}. ${s}`).join('\n')}
+
+【改寫策略】${analysis.overall_strategy}
+` : '';
+
+    prompt = `你是一位頂尖的履歷撰寫專家。請根據以下分析結果，針對性地改寫這份履歷。
 
 回覆語言：${lang}
 ${role ? `應徵職位：${role}` : ''}
-${jd ? `職缺描述（請針對此職缺優化）：\n${jd}` : ''}
+${jd ? `職缺描述：\n${jd}` : ''}
+${weaknessSection}
 
 原始履歷：
 ${resume}
 
-請依照以下原則大幅改寫這份履歷，直接輸出完整改善版，不要加任何說明：
-
-【改寫原則】
-1. 每條經歷都必須用「動詞開頭 + 具體行動 + 量化成果」的結構重寫
-   - 錯誤示範：「負責市場分析與策略規劃」
-   - 正確示範：「主導3大產業品牌年度市場分析，識別5個關鍵成長機會，直接支援品牌媒體預算配置決策」
-2. 數字只能使用原始履歷中明確提到的數據，絕對不可以自己編造或估算任何數字、百分比、金額或數量。如果原文沒有數字，就用強而有力的動詞和具體描述取代，不要捏造。
-3. 把被動語氣改成主動語氣（「負責」→「主導」、「協助」→「獨立完成」）
-4. 突出你的獨特貢獻，而不只是描述職責
-5. 如果有提供職缺描述，優先凸顯與職缺最相關的技能與成就
-6. 整體篇幅可以比原版精簡20%，去掉冗詞贅字`;
+【改寫規則】
+1. 針對上方「分析發現的問題」逐一解決，這是最優先任務
+2. 凸顯與職缺最相關的技能與成就，讓面試官一眼看到符合度
+3. 保留原始數字，絕對不可自行捏造數字
+4. 用主動語氣重寫（「主導」「推動」「建立」），去掉「負責」「協助」等被動詞
+5. 每條經歷要有「做了什麼 + 怎麼做 + 產生什麼價值」的結構
+6. 直接輸出完整改善版履歷，不要加任何說明或前言`;
 
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -49,7 +100,7 @@ ${resume}
       }
       const data = await response.json();
       const text = data.content.map(i => i.text || '').join('');
-      res.status(200).json({ improved: text });
+      res.status(200).json({ improved: text, analysis: analysis });
     } catch(e) {
       console.error('Error:', e.message);
       res.status(500).json({ error: e.message });
