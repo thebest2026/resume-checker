@@ -73,21 +73,10 @@
   .iw { border-left: 3px solid var(--amber); }
   .ib { border-left: 3px solid var(--red); }
   .ib2 { border-left: 3px solid var(--blue); }
-  .improved-box {
-    background: var(--bg-2); border-radius: var(--rl);
-    border: 0.5px solid var(--border); overflow: hidden;
-  }
-  .improved-header {
-    padding: 12px 16px; border-bottom: 0.5px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .improved-box { background: var(--bg-2); border-radius: var(--rl); border: 0.5px solid var(--border); overflow: hidden; }
+  .improved-header { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
   .improved-header span { font-size: 13px; font-weight: 500; color: var(--text-2); }
-  .copy-btn {
-    font-size: 13px; padding: 5px 14px; cursor: pointer;
-    border: 0.5px solid var(--border-2); border-radius: var(--r);
-    background: transparent; color: var(--text); font-family: inherit;
-    transition: background 0.15s;
-  }
+  .copy-btn { font-size: 13px; padding: 5px 14px; cursor: pointer; border: 0.5px solid var(--border-2); border-radius: var(--r); background: transparent; color: var(--text); font-family: inherit; transition: background 0.15s; }
   .copy-btn:hover { background: var(--bg-3); }
   .copy-btn.copied { color: var(--green); }
   .improved-text { padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--text); }
@@ -130,8 +119,8 @@
   </div>
 
   <div class="field">
-    <label>職缺描述（選填）— 貼上 JD，AI 幫你分析符合度</label>
-    <textarea id="jd" style="min-height:120px" placeholder="把職缺描述貼在這裡，可以讓分析更精準"></textarea>
+    <label>職缺描述（選填）— 貼上 JD，AI 幫你分析符合度並針對性改寫</label>
+    <textarea id="jd" style="min-height:120px" placeholder="把職缺描述貼在這裡，可以讓分析與改寫更精準"></textarea>
   </div>
 
   <button class="btn" id="btn" onclick="run()">開始分析 →</button>
@@ -164,7 +153,7 @@ async function run() {
   if (!resume) { resultEl.innerHTML = '<p class="err">請先貼上你的履歷內容喔！</p>'; return; }
 
   btn.disabled = true;
-  resultEl.innerHTML = `<p class="loading">${currentTab === 'analyze' ? 'AI 正在分析你的履歷' : 'AI 正在產出改善版履歷'}<span class="dot"></span></p>`;
+  resultEl.innerHTML = `<p class="loading">${currentTab === 'analyze' ? 'AI 正在分析你的履歷' : 'AI 正在診斷並改寫你的履歷（需要約15秒）'}<span class="dot"></span></p>`;
 
   try {
     const res = await fetch('/api/analyze', {
@@ -176,7 +165,19 @@ async function run() {
     const d = await res.json();
 
     if (currentTab === 'improve') {
+      const analysisHtml = d.analysis ? `
+        <div class="sec" style="margin-bottom:1.5rem;">
+          <div class="sec-title">改寫前的診斷</div>
+          ${d.analysis.weaknesses.map(w => `<div class="item iw">${w}</div>`).join('')}
+          ${(d.analysis.missing_from_jd||[]).length ? `
+            <div class="sec-title" style="margin-top:12px;">職缺要求但待補強</div>
+            ${d.analysis.missing_from_jd.map(m => `<div class="item ib2">${m}</div>`).join('')}
+          ` : ''}
+          ${d.analysis.overall_strategy ? `<div class="tip" style="margin-top:12px;">🎯 ${d.analysis.overall_strategy}</div>` : ''}
+        </div>` : '';
+
       resultEl.innerHTML = `
+        ${analysisHtml}
         <div class="improved-box">
           <div class="improved-header">
             <span>改善版履歷</span>
