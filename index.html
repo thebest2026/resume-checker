@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>履歷健診工具</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg-2: #f5f4f0; --bg-3: #eeedea;
+    --text: #1a1a18; --text-2: #6b6a65;
+    --border: rgba(0,0,0,0.13); --border-2: rgba(0,0,0,0.28);
+    --r: 8px; --rl: 12px;
+    --green: #1D9E75; --green-bg: #E1F5EE; --green-dk: #0F6E56;
+    --amber: #BA7517; --red: #E24B4A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg-2: #252523; --bg-3: #2e2e2b;
+      --text: #f0efe9; --text-2: #9a9890;
+      --border: rgba(255,255,255,0.11); --border-2: rgba(255,255,255,0.24);
+      --green-bg: #085041; --green-dk: #9FE1CB;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2.5rem 1rem 5rem; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-bottom: 1rem; background: var(--green-bg); color: var(--green-dk); }
+  h1 { font-size: 26px; font-weight: 500; letter-spacing: -0.4px; margin-bottom: 6px; }
+  .sub { font-size: 15px; color: var(--text-2); line-height: 1.6; margin-bottom: 2rem; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+  input, textarea, select {
+    width: 100%; font-family: inherit; font-size: 14px; line-height: 1.6;
+    padding: 10px 14px; border: 0.5px solid var(--border);
+    border-radius: var(--rl); background: var(--bg); color: var(--text);
+    transition: border-color 0.15s;
+  }
+  input { height: 40px; }
+  textarea { min-height: 220px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--border-2); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 22px; font-size: 14px; font-weight: 500;
+    border: 0.5px solid var(--border-2); border-radius: var(--r);
+    background: transparent; color: var(--text); cursor: pointer;
+    transition: background 0.15s, transform 0.1s; font-family: inherit;
+  }
+  .btn:hover { background: var(--bg-2); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .result { margin-top: 2rem; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .score-card { background: var(--bg-2); border-radius: var(--r); padding: 14px 16px; }
+  .score-card .lbl { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .score-card .val { font-size: 26px; font-weight: 500; }
+  .cg { color: var(--green); } .ca { color: var(--amber); } .cr { color: var(--red); }
+  .tip { padding: 12px 16px; border-radius: var(--r); background: var(--bg-2); font-size: 14px; font-weight: 500; margin-bottom: 1.25rem; line-height: 1.6; }
+  .sec { margin-bottom: 1.25rem; }
+  .sec-title { font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .item { font-size: 14px; line-height: 1.65; padding: 10px 14px; border-radius: 0 var(--r) var(--r) 0; border: 0.5px solid var(--border); margin-bottom: 6px; background: var(--bg); }
+  .ig { border-left: 3px solid var(--green); }
+  .iw { border-left: 3px solid var(--amber); }
+  .ib { border-left: 3px solid var(--red); }
+  .loading { font-size: 14px; color: var(--text-2); padding: 2rem 0; }
+  .dot::after { content: '.'; animation: dots 1.2s steps(3,end) infinite; }
+  @keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+  .err { font-size: 14px; color: var(--red); padding: 1rem 0; }
+  footer { margin-top: 3rem; font-size: 12px; color: var(--text-2); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge">AI 履歷健診</div>
+  <h1>履歷健診工具</h1>
+  <p class="sub">貼上你的履歷，AI 幫你找出優點、需要加強的地方，以及必須修正的問題。</p>
+
+  <div class="row">
+    <div class="field">
+      <label>應徵職位（選填）</label>
+      <input type="text" id="role" placeholder="例：行銷專員、產品經理…" />
+    </div>
+    <div class="field">
+      <label>回覆語言</label>
+      <select id="lang">
+        <option value="繁體中文">繁體中文</option>
+        <option value="英文">English</option>
+        <option value="簡體中文">简体中文</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>履歷內容</label>
+    <textarea id="resume" placeholder="把你的履歷內容貼在這裡&#10;&#10;可以包含：工作經歷、學歷、技能、自傳等任何部分"></textarea>
+  </div>
+
+  <button class="btn" id="btn" onclick="analyze()">開始健診 →</button>
+
+  <div class="result" id="result"></div>
+
+  <footer>由 Claude AI 驅動・你的資料不會被儲存</footer>
+</div>
+
+<script>
+async function analyze() {
+  const resume = document.getElementById('resume').value.trim();
+  const role = document.getElementById('role').value.trim();
+  const lang = document.getElementById('lang').value;
+  const btn = document.getElementById('btn');
+  const resultEl = document.getElementById('result');
+
+  if (!resume) { resultEl.innerHTML = '<p class="err">請先貼上你的履歷內容喔！</p>'; return; }
+
+  btn.disabled = true;
+  resultEl.innerHTML = '<p class="loading">AI 正在分析你的履歷<span class="dot"></span></p>';
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resume, role, lang })
+    });
+    if (!res.ok) throw new Error('伺服器錯誤，請稍後再試');
+    const d = await res.json();
+
+    const sc = v => v >= 75 ? 'cg' : v >= 50 ? 'ca' : 'cr';
+    const all = { '整體評分': d.overall, ...d.scores };
+    const scHtml = Object.entries(all).map(([k,v]) =>
+      `<div class="score-card"><div class="lbl">${k}</div><div class="val ${sc(v)}">${v}</div></div>`
+    ).join('');
+    const items = (arr, cls) => arr.map(t => `<div class="item ${cls}">${t}</div>`).join('');
+
+    resultEl.innerHTML = `
+      <div class="score-grid">${scHtml}</div>
+      ${d.tip ? `<div class="tip">💡 ${d.tip}</div>` : ''}
+      <div class="sec"><div class="sec-title">做得好的地方</div>${items(d.strengths,'ig')}</div>
+      <div class="sec"><div class="sec-title">建議加強</div>${items(d.warnings,'iw')}</div>
+      ${d.critical?.length ? `<div class="sec"><div class="sec-title">必須修正</div>${items(d.critical,'ib')}</div>` : ''}
+    `;
+  } catch(e) {
+    resultEl.innerHTML = `<p class="err">${e.message}</p>`;
+  }
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
