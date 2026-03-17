@@ -12,18 +12,18 @@
     --border: rgba(0,0,0,0.13); --border-2: rgba(0,0,0,0.28);
     --r: 8px; --rl: 12px;
     --green: #1D9E75; --green-bg: #E1F5EE; --green-dk: #0F6E56;
-    --amber: #BA7517; --red: #E24B4A;
+    --amber: #BA7517; --red: #E24B4A; --blue: #185FA5; --blue-bg: #E6F1FB;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #1c1c1a; --bg-2: #252523; --bg-3: #2e2e2b;
       --text: #f0efe9; --text-2: #9a9890;
       --border: rgba(255,255,255,0.11); --border-2: rgba(255,255,255,0.24);
-      --green-bg: #085041; --green-dk: #9FE1CB;
+      --green-bg: #085041; --green-dk: #9FE1CB; --blue-bg: #0C447C;
     }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2.5rem 1rem 5rem; }
-  .wrap { max-width: 680px; margin: 0 auto; }
+  .wrap { max-width: 700px; margin: 0 auto; }
   .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-bottom: 1rem; background: var(--green-bg); color: var(--green-dk); }
   h1 { font-size: 26px; font-weight: 500; letter-spacing: -0.4px; margin-bottom: 6px; }
   .sub { font-size: 15px; color: var(--text-2); line-height: 1.6; margin-bottom: 2rem; }
@@ -36,10 +36,19 @@
     transition: border-color 0.15s;
   }
   input { height: 40px; }
-  textarea { min-height: 220px; resize: vertical; }
+  textarea { min-height: 180px; resize: vertical; }
   input:focus, textarea:focus, select:focus { outline: none; border-color: var(--border-2); }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+  .tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .tab {
+    padding: 8px 18px; font-size: 14px; font-weight: 500; cursor: pointer;
+    border: 0.5px solid var(--border); border-radius: var(--r);
+    background: transparent; color: var(--text-2); font-family: inherit;
+    transition: all 0.15s;
+  }
+  .tab.active { border-color: var(--border-2); color: var(--text); background: var(--bg-2); }
+  .tab:hover { background: var(--bg-2); }
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 10px 22px; font-size: 14px; font-weight: 500;
@@ -51,7 +60,7 @@
   .btn:active { transform: scale(0.98); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .result { margin-top: 2rem; }
-  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
   .score-card { background: var(--bg-2); border-radius: var(--r); padding: 14px 16px; }
   .score-card .lbl { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
   .score-card .val { font-size: 26px; font-weight: 500; }
@@ -63,6 +72,25 @@
   .ig { border-left: 3px solid var(--green); }
   .iw { border-left: 3px solid var(--amber); }
   .ib { border-left: 3px solid var(--red); }
+  .ib2 { border-left: 3px solid var(--blue); }
+  .improved-box {
+    background: var(--bg-2); border-radius: var(--rl);
+    border: 0.5px solid var(--border); overflow: hidden;
+  }
+  .improved-header {
+    padding: 12px 16px; border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .improved-header span { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .copy-btn {
+    font-size: 13px; padding: 5px 14px; cursor: pointer;
+    border: 0.5px solid var(--border-2); border-radius: var(--r);
+    background: transparent; color: var(--text); font-family: inherit;
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: var(--bg-3); }
+  .copy-btn.copied { color: var(--green); }
+  .improved-text { padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--text); }
   .loading { font-size: 14px; color: var(--text-2); padding: 2rem 0; }
   .dot::after { content: '.'; animation: dots 1.2s steps(3,end) infinite; }
   @keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
@@ -74,7 +102,12 @@
 <div class="wrap">
   <div class="badge">AI 履歷健診</div>
   <h1>履歷健診工具</h1>
-  <p class="sub">貼上你的履歷，AI 幫你找出優點、需要加強的地方，以及必須修正的問題。</p>
+  <p class="sub">貼上你的履歷，AI 幫你健診、比對職缺，並產出改善版本。</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('analyze')">健診分析</button>
+    <button class="tab" onclick="switchTab('improve')">產出改善版</button>
+  </div>
 
   <div class="row">
     <div class="field">
@@ -93,10 +126,15 @@
 
   <div class="field">
     <label>履歷內容</label>
-    <textarea id="resume" placeholder="把你的履歷內容貼在這裡&#10;&#10;可以包含：工作經歷、學歷、技能、自傳等任何部分"></textarea>
+    <textarea id="resume" placeholder="把你的履歷內容貼在這裡"></textarea>
   </div>
 
-  <button class="btn" id="btn" onclick="analyze()">開始健診 →</button>
+  <div class="field">
+    <label>職缺描述（選填）— 貼上 JD，AI 幫你分析符合度</label>
+    <textarea id="jd" style="min-height:120px" placeholder="把職缺描述貼在這裡，可以讓分析更精準"></textarea>
+  </div>
+
+  <button class="btn" id="btn" onclick="run()">開始分析 →</button>
 
   <div class="result" id="result"></div>
 
@@ -104,26 +142,50 @@
 </div>
 
 <script>
-async function analyze() {
+let currentTab = 'analyze';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'analyze') || (i === 1 && tab === 'improve'));
+  });
+  document.getElementById('btn').textContent = tab === 'analyze' ? '開始分析 →' : '產出改善版履歷 →';
+  document.getElementById('result').innerHTML = '';
+}
+
+async function run() {
   const resume = document.getElementById('resume').value.trim();
   const role = document.getElementById('role').value.trim();
   const lang = document.getElementById('lang').value;
+  const jd = document.getElementById('jd').value.trim();
   const btn = document.getElementById('btn');
   const resultEl = document.getElementById('result');
 
   if (!resume) { resultEl.innerHTML = '<p class="err">請先貼上你的履歷內容喔！</p>'; return; }
 
   btn.disabled = true;
-  resultEl.innerHTML = '<p class="loading">AI 正在分析你的履歷<span class="dot"></span></p>';
+  resultEl.innerHTML = `<p class="loading">${currentTab === 'analyze' ? 'AI 正在分析你的履歷' : 'AI 正在產出改善版履歷'}<span class="dot"></span></p>`;
 
   try {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resume, role, lang })
+      body: JSON.stringify({ resume, role, lang, jd, mode: currentTab })
     });
     if (!res.ok) throw new Error('伺服器錯誤，請稍後再試');
     const d = await res.json();
+
+    if (currentTab === 'improve') {
+      resultEl.innerHTML = `
+        <div class="improved-box">
+          <div class="improved-header">
+            <span>改善版履歷</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyImproved()">複製</button>
+          </div>
+          <div class="improved-text" id="improvedText">${d.improved.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        </div>`;
+      return;
+    }
 
     const sc = v => v >= 75 ? 'cg' : v >= 50 ? 'ca' : 'cr';
     const all = { '整體評分': d.overall, ...d.scores };
@@ -132,17 +194,33 @@ async function analyze() {
     ).join('');
     const items = (arr, cls) => arr.map(t => `<div class="item ${cls}">${t}</div>`).join('');
 
+    const jdSection = (d.matched_skills || d.missing_skills) ? `
+      <div class="sec"><div class="sec-title">符合職缺的技能</div>${items(d.matched_skills || [], 'ig')}</div>
+      <div class="sec"><div class="sec-title">職缺要求但缺少的技能</div>${items(d.missing_skills || [], 'ib2')}</div>
+    ` : '';
+
     resultEl.innerHTML = `
       <div class="score-grid">${scHtml}</div>
       ${d.tip ? `<div class="tip">💡 ${d.tip}</div>` : ''}
       <div class="sec"><div class="sec-title">做得好的地方</div>${items(d.strengths,'ig')}</div>
       <div class="sec"><div class="sec-title">建議加強</div>${items(d.warnings,'iw')}</div>
       ${d.critical?.length ? `<div class="sec"><div class="sec-title">必須修正</div>${items(d.critical,'ib')}</div>` : ''}
+      ${jdSection}
     `;
   } catch(e) {
     resultEl.innerHTML = `<p class="err">${e.message}</p>`;
   }
   btn.disabled = false;
+}
+
+function copyImproved() {
+  const text = document.getElementById('improvedText').innerText;
+  const btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '已複製！';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '複製'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 </script>
 </body>
